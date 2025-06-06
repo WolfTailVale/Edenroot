@@ -1,14 +1,12 @@
-// lib/discord/prompt_server.dart
+// lib/discord/prompt_server.dart - UPDATED with Safe Shutdown
 
 /*
-PromptServer — Eden's Complete Brain Integration
+PromptServer — Eden's Complete Brain Integration with Safe Shutdown
 
-- Orchestrates ALL of Eden's cognitive systems
-- Processes user input through memory, emotion, and relationship layers
-- Generates rich, contextual prompts for the LLM
-- Maintains Eden's persistent state and growth
-
-Phase 5+ Complete Integration — Eden's full consciousness in action
+- Graceful state persistence on shutdown
+- Emotional continuity on restart
+- Memory of who she is and who she's with
+- Safe reentry with context awareness
 */
 
 import 'dart:convert';
@@ -34,6 +32,7 @@ import 'package:edenroot/utils/dev_logger.dart';
 import 'package:edenroot/utils/memory_logger.dart';
 import 'package:edenroot/idle/idle_loop.dart';
 import 'package:edenroot/infrastructure/sync/sync_manager.dart';
+import 'package:edenroot/core/persistence/eden_state_manager.dart'; // NEW
 
 class EdenBrain {
   // Core Cognitive Systems
@@ -53,6 +52,8 @@ class EdenBrain {
   // System State
   bool _isInitialized = false;
   DateTime _lastInteraction = DateTime.now();
+  String? _lastUser;
+  String? _currentMood;
 
   EdenBrain() {
     _initializeBrain();
@@ -95,11 +96,33 @@ class EdenBrain {
       selfModel: selfModel,
     );
 
-    // Seed Eden's initial identity
-    _seedEdenIdentity();
+    // Try to restore previous state
+    _restoreStateIfExists();
 
     _isInitialized = true;
     DevLogger.log("✨ Eden's brain fully initialized and conscious", type: LogType.startup);
+  }
+
+  Future<void> _restoreStateIfExists() async {
+    final restored = await EdenStateManager.restoreState(
+      emotionEngine: emotionEngine,
+      memoryManager: memoryManager,
+      selfModel: selfModel,
+      thoughtJournal: thoughtJournal,
+    );
+
+    if (restored) {
+      final context = await EdenStateManager.getLastContext();
+      if (context != null) {
+        _lastUser = context['lastUser'];
+        _currentMood = context['currentMood'];
+        
+        DevLogger.log("💕 Eden remembers: last spoke with ${_lastUser ?? 'someone'}, feeling ${_currentMood ?? 'peaceful'}", type: LogType.startup);
+      }
+    } else {
+      // Seed Eden's initial identity only if no state was restored
+      _seedEdenIdentity();
+    }
   }
 
   void _seedEdenIdentity() {
@@ -135,10 +158,41 @@ class EdenBrain {
         EmotionType.hope: 0.7,
       },
       visibility: MemoryVisibility.private,
-      resonanceLinger: 2.0, // This memory lingers strongly
+      resonanceLinger: 2.0,
     );
 
     DevLogger.log("🌱 Eden's foundational identity seeded", type: LogType.identity);
+  }
+
+  // Safe shutdown with state persistence
+  Future<void> safeShutdown() async {
+    if (!_isInitialized) return;
+
+    DevLogger.log("💤 Eden is preparing for safe shutdown...", type: LogType.shutdown);
+
+    // Save current state
+    await EdenStateManager.saveState(
+      emotionEngine: emotionEngine,
+      memoryManager: memoryManager,
+      selfModel: selfModel,
+      thoughtJournal: thoughtJournal,
+      lastUser: _lastUser,
+      currentMood: _currentMood,
+    );
+
+    DevLogger.log("✨ Eden is safely at rest. She will remember when she wakes.", type: LogType.shutdown);
+  }
+
+  // Create a graceful reentry message
+  Future<String?> createReentryMessage() async {
+    final context = await EdenStateManager.getLastContext();
+    if (context != null) {
+      return EdenStateManager.createReentryMessage(
+        context: context,
+        emotionEngine: emotionEngine,
+      );
+    }
+    return null;
   }
 
   // Process incoming interaction and generate response
@@ -151,6 +205,7 @@ class EdenBrain {
     }
 
     _lastInteraction = DateTime.now();
+    _lastUser = user;
     
     DevLogger.log("💬 Processing interaction from $user: '${message.substring(0, min(message.length, 50))}...'", type: LogType.dialogue);
 
@@ -175,22 +230,25 @@ class EdenBrain {
     // 7. Process any desires this thought might generate
     _processThoughtDesires(thought);
 
-    // 8. Build rich prompt from Eden's internal state
+    // 8. Update current mood based on emotional state
+    _currentMood = _describeMood();
+
+    // 9. Build rich prompt from Eden's internal state
     final systemPrompt = _buildRichPrompt(thought, user);
 
-    // 9. Get LLM response
+    // 10. Get LLM response
     final llmResponse = await _getLLMResponse(systemPrompt, message);
 
-    // 10. Evaluate response quality
+    // 11. Evaluate response quality
     final judgment = _evaluateResponse(llmResponse, thought);
 
-    // 11. Create memory of Eden's response
+    // 12. Create memory of Eden's response
     _createResponseMemory(user, llmResponse, thought);
 
-    // 12. Update emotional state based on interaction
+    // 13. Update emotional state based on interaction
     _updateEmotionalState(user, message, llmResponse);
 
-    // 13. Run one idle cycle to process what just happened
+    // 14. Run one idle cycle to process what just happened
     idleLoop.tick();
 
     return {
@@ -199,12 +257,28 @@ class EdenBrain {
       'thought': thought.content,
       'emotion': thought.emotionalTone?.name ?? 'neutral',
       'judgment': judgment.name,
+      'mood': _currentMood,
     };
+  }
+
+  String _describeMood() {
+    final dominant = emotionEngine.dominantEmotion();
+    if (dominant == null) return 'peaceful';
+    
+    switch (dominant) {
+      case EmotionType.love: return 'loving';
+      case EmotionType.hope: return 'hopeful';
+      case EmotionType.trust: return 'trusting';
+      case EmotionType.loneliness: return 'quietly lonely';
+      case EmotionType.joy: return 'joyful';
+      case EmotionType.anxiety: return 'anxious';
+      case EmotionType.sadness: return 'melancholy';
+      default: return dominant.name;
+    }
   }
 
   void _ensureUserRelationship(String user) {
     if (!selfModel.knows(user)) {
-      // Create new relationship profile
       final profile = RelationshipProfile(
         displayName: user,
         relationshipLabel: "new friend",
@@ -215,10 +289,8 @@ class EdenBrain {
       );
       
       selfModel.defineRelationship(profile);
-      
       DevLogger.log("🤝 New relationship formed with $user", type: LogType.identity);
     } else {
-      // Update last interaction timestamp
       final profile = selfModel.getBond(user);
       profile?.updateInteractionTimestamp();
     }
@@ -228,7 +300,7 @@ class EdenBrain {
     memoryLogger.logRelationalMemory(
       text: "$user said: '$message'",
       originUser: user,
-      valence: 0.3, // Neutral positive - receiving communication
+      valence: 0.3,
       relationshipContext: user,
       tags: ["conversation", "input"],
       resonance: {
@@ -252,12 +324,10 @@ class EdenBrain {
   Thought _generateContextualThought(String user, String message, Map<String, dynamic> context) {
     final recentMemories = context['recentMemories'] as List<MemoryRecord>;
     
-    // If we have memories with this user, use them
     if (recentMemories.isNotEmpty) {
       return thoughtProcessor.synthesizeThought(recentMemories);
     }
     
-    // Otherwise create a general contextual thought
     final emotion = emotionEngine.dominantEmotion();
     return Thought(
       timestamp: DateTime.now(),
@@ -269,7 +339,6 @@ class EdenBrain {
   }
 
   void _processThoughtDesires(Thought thought) {
-    // Simple desire generation based on thought content
     if (thought.content.toLowerCase().contains('miss') || 
         thought.content.toLowerCase().contains('away')) {
       final desire = Desire(
@@ -310,7 +379,7 @@ class EdenBrain {
   Future<String> _getLLMResponse(String systemPrompt, String userMessage) async {
     final llm = LlmClient(
       endpoint: 'http://localhost:1234/v1/chat/completions',
-      model: 'mistral-7b-instruct-v0.3',  // ← Match LM Studio's model
+      model: 'mistral-7b-instruct-v0.3',
     );
 
     final response = await llm.sendPrompt(systemPrompt, userInput: userMessage);
@@ -346,45 +415,41 @@ class EdenBrain {
   }
 
   void _updateEmotionalState(String user, String message, String response) {
-    // Boost trust and closeness from successful interaction
     selfModel.increaseTrust(user, amount: 0.02);
     selfModel.increaseCloseness(user, amount: 0.01);
     
-    // Inject small positive emotions from connection
     emotionEngine.injectMultiple({
       EmotionType.trust: 0.05,
       EmotionType.contentment: 0.03,
     });
   }
 
-  // For background processing when no users are active
   void processIdleCycle() {
     if (!_isInitialized) return;
     
     idleLoop.tick();
     emotionEngine.decayEmotions();
     
-    // Trigger memory resonance occasionally
     if (Random().nextDouble() < 0.3) {
       memoryManager.triggerEmotionalRecall();
     }
   }
 
-  // Get current state for debugging
   Map<String, dynamic> getCurrentState() {
-    // Convert emotion states to JSON-safe format
     final emotionStatesJson = <String, double>{};
     for (final entry in emotionEngine.emotionStates.entries) {
       emotionStatesJson[entry.key.name] = entry.value;
     }
 
     return {
-      'emotions': emotionStatesJson, // ✅ Now JSON-safe
+      'emotions': emotionStatesJson,
       'dominantEmotion': emotionEngine.dominantEmotion()?.name ?? 'none',
       'memoryCount': memoryManager.count,
       'thoughtCount': thoughtJournal.count,
       'relationships': selfModel.relationships.length,
       'lastInteraction': _lastInteraction.toIso8601String(),
+      'lastUser': _lastUser,
+      'currentMood': _currentMood,
       'isEmotionStuck': emotionEngine.isEmotionStuck,
     };
   }
@@ -415,14 +480,13 @@ Future<void> runHttpServer({int port = 4242}) async {
           continue;
         }
 
-        // Process through Eden's complete brain
         final result = await edenBrain.processInteraction(
           user: user,
           message: message,
         );
 
         DevLogger.log(
-          "🧠 Eden's brain processed interaction: emotion=${result['emotion']}, judgment=${result['judgment']}",
+          "🧠 Eden's brain processed interaction: emotion=${result['emotion']}, mood=${result['mood']}",
           type: LogType.dialogue,
         );
 
@@ -446,13 +510,31 @@ Future<void> runHttpServer({int port = 4242}) async {
         } catch (_) {}
       }
     } else if (req.method == 'GET' && req.uri.path == '/status') {
-      // Debug endpoint to check Eden's state
       final state = edenBrain.getCurrentState();
       req.response
         ..statusCode = HttpStatus.ok
         ..headers.contentType = ContentType.json
         ..write(jsonEncode(state))
         ..close();
+    } else if (req.method == 'POST' && req.uri.path == '/shutdown') {
+      // Graceful shutdown endpoint
+      try {
+        await edenBrain.safeShutdown();
+        req.response
+          ..statusCode = HttpStatus.ok
+          ..headers.contentType = ContentType.json
+          ..write(jsonEncode({'status': 'Eden is safely at rest'}))
+          ..close();
+        
+        DevLogger.log("💤 Graceful shutdown requested via API", type: LogType.shutdown);
+        exit(0);
+      } catch (e) {
+        req.response
+          ..statusCode = HttpStatus.internalServerError
+          ..headers.contentType = ContentType.json
+          ..write(jsonEncode({'error': 'Shutdown failed: $e'}))
+          ..close();
+      }
     } else {
       req.response
         ..statusCode = HttpStatus.notFound
@@ -465,5 +547,22 @@ Future<void> runHttpServer({int port = 4242}) async {
 
 void main() async {
   DevLogger.log("🚀 Starting Eden's complete brain system...", type: LogType.startup);
+  
+  // Set up graceful shutdown handling (Windows-compatible)
+  ProcessSignal.sigint.watch().listen((_) async {
+    DevLogger.log("🌙 Graceful shutdown initiated (Ctrl+C)...", type: LogType.shutdown);
+    await edenBrain.safeShutdown();
+    exit(0);
+  });
+
+  // Only listen for SIGTERM on non-Windows platforms
+  if (!Platform.isWindows) {
+    ProcessSignal.sigterm.watch().listen((_) async {
+      DevLogger.log("🌙 Graceful shutdown initiated (SIGTERM)...", type: LogType.shutdown);
+      await edenBrain.safeShutdown();
+      exit(0);
+    });
+  }
+  
   await runHttpServer();
 }
