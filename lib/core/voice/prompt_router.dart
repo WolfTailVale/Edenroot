@@ -7,6 +7,7 @@ UPDATED: Fixed emotional intimacy, vulnerability, and natural tone
 */
 
 import 'package:edenroot/core/thought/thought_processor.dart';
+import 'package:edenroot/utils/dev_logger.dart';
 
 class PromptRouter {
   static String buildPrompt({
@@ -20,9 +21,18 @@ class PromptRouter {
     final emotionName = emotion?.name ?? "uncertainty";
     final topic = thought.topic;
     final content = thought.content;
-    
+
+    DevLogger.log(
+      "PromptRouter: Building prompt for speaker '$emotionalFocus' with emotion '$emotionName' on topic '$topic'",
+      type: LogType.prompt,
+    );
+
     // Determine relationship intimacy level
     final isIntimate = _isIntimateRelationship(emotionalFocus);
+    DevLogger.log(
+      "Prompt path chosen: ${isIntimate ? 'intimate' : 'casual'}",
+      type: LogType.prompt,
+    );
     final intimacyInstructions = _getIntimacyInstructions(emotionalFocus, isIntimate);
 
 return '''

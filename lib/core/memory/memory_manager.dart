@@ -26,7 +26,16 @@ class MemoryManager {
 
   void addMemory(MemoryRecord memory) {
     _memories.add(memory);
-    DevLogger.log('Memory added: ${memory.text}', type: LogType.memory);
+    final primaryEmotion = memory.resonance.keys.isNotEmpty
+        ? memory.resonance.keys.first.name
+        : 'none';
+    final memType = memory.visibility == MemoryVisibility.internal
+        ? 'volatile'
+        : 'long-term';
+    DevLogger.log(
+      'Saving memory: ${memory.summary} | emotion: $primaryEmotion | type: $memType',
+      type: LogType.memory,
+    );
     
     // NEW: Immediately apply emotional resonance when memory is created
     if (_emotionEngine != null && memory.resonance.isNotEmpty) {

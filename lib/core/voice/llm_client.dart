@@ -32,6 +32,11 @@ class LlmClient {
       if (apiKey != null) 'Authorization': 'Bearer $apiKey',
     };
 
+    DevLogger.log(
+      "🔌 Sending prompt to model '$model' at endpoint $endpoint",
+      type: LogType.prompt,
+    );
+
     // Merge system prompt + user input into one message
     final fullContent = userInput != null
         ? "$systemPrompt\n\nUser: $userInput"
@@ -52,6 +57,13 @@ class LlmClient {
       final decoded = json.decode(response.body);
       final choices = decoded['choices'];
       if (choices != null && choices.isNotEmpty) {
+        final finish = choices[0]['finish_reason'];
+        if (finish != null && finish != 'stop') {
+          DevLogger.log(
+            "LLM response incomplete. Attempting fallback or truncation repair.",
+            type: LogType.warning,
+          );
+        }
         return choices[0]['message']['content'] as String;
       }
     } else {

@@ -241,6 +241,11 @@ class EdenStateManager {
           emotionEngine.inject(emotionType, entry.value);
         }
       }
+
+      DevLogger.log(
+        "Restored emotional state: ${emotionEngine.emotionStates.length} emotions loaded",
+        type: LogType.startup,
+      );
     }
   }
 
@@ -249,7 +254,7 @@ class EdenStateManager {
     if (await file.exists()) {
       final content = await file.readAsString();
       final memoriesData = List<Map<String, dynamic>>.from(jsonDecode(content));
-      
+
       for (final memData in memoriesData) {
         final resonance = <EmotionType, double>{};
         if (memData['resonance'] != null) {
@@ -281,6 +286,11 @@ class EdenStateManager {
 
         memoryManager.addMemory(memory);
       }
+
+      DevLogger.log(
+        'Restored memory set for Eden: ${memoryManager.count} entries recovered',
+        type: LogType.startup,
+      );
     }
   }
 
@@ -305,6 +315,11 @@ class EdenStateManager {
 
         selfModel.defineRelationship(relationship);
       }
+
+      DevLogger.log(
+        'Restored relationships: ${selfModel.relationships.length} profiles loaded',
+        type: LogType.startup,
+      );
     }
   }
 

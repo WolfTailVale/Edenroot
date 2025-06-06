@@ -20,7 +20,7 @@ bool get kDebugMode {
 enum LogType {
   info, warning, error, memory, fire, hive, ai,
   desire, reflection, idle, emotion, startup, shutdown,
-  identity, autonomy, dialogue, dream, debug,
+  identity, autonomy, dialogue, prompt, dream, debug,
 }
 
 class DevLogger {
@@ -59,6 +59,7 @@ class DevLogger {
       case LogType.identity: return "🌸";
       case LogType.autonomy: return "🧭";
       case LogType.dialogue: return "💬";
+      case LogType.prompt: return "🧬";
       case LogType.dream: return "🌌";
       case LogType.debug: return "🐞";
     }
