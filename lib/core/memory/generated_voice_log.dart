@@ -11,11 +11,13 @@ GeneratedVoiceLog — Stores Eden’s generated voice responses alongside their 
 
 import 'dart:convert';
 import 'dart:io';
+
+import '../../utils/dev_logger.dart';
+import '../emotion/emotion_engine.dart';
+import '../thought/thought_processor.dart';
+import '../voice/output_filter.dart';
 import 'package:path/path.dart' as p;
-import 'package:edenroot/core/emotion/emotion_engine.dart';
-import 'package:edenroot/core/thought/thought_processor.dart';
-import 'package:edenroot/core/voice/output_filter.dart';
-import 'package:edenroot/utils/dev_logger.dart';
+
 
 class SpokenMemory {
   final DateTime timestamp;
