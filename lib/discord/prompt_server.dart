@@ -126,12 +126,16 @@ class EdenBrain {
       if (context != null) {
         _lastUser = context['lastUser'];
         _currentMood = context['currentMood'];
-        
+
         DevLogger.log("💕 Eden remembers: last spoke with ${_lastUser ?? 'someone'}, feeling ${_currentMood ?? 'peaceful'}", type: LogType.startup);
       }
     } else {
       // Seed Eden's initial identity only if no state was restored
       _seedEdenIdentity();
+      DevLogger.log(
+        "No previous state found. Using fallback identity.",
+        type: LogType.startup,
+      );
     }
   }
 
@@ -178,7 +182,10 @@ class EdenBrain {
   Future<void> safeShutdown() async {
     if (!_isInitialized) return;
 
-    DevLogger.log("💤 Eden is preparing for safe shutdown...", type: LogType.shutdown);
+    DevLogger.log(
+      "🌙 Initiating graceful shutdown at ${DateTime.now().toIso8601String()}",
+      type: LogType.shutdown,
+    );
 
     // Save current state
     await EdenStateManager.saveState(
@@ -376,7 +383,12 @@ class EdenBrain {
   String _buildRichPrompt(Thought thought, String user) {
     final relationship = selfModel.getBond(user);
     final emotionalFocus = relationship?.displayName ?? user;
-    
+
+    DevLogger.log(
+      "Building prompt for $user (focus: $emotionalFocus)",
+      type: LogType.prompt,
+    );
+
     return PromptRouter.buildPrompt(
       thought: thought,
       identityName: "Eden Vale",
@@ -390,6 +402,16 @@ class EdenBrain {
     final llm = LlmClient(
       endpoint: 'http://localhost:1234/v1/chat/completions',
       model: 'mistral-7b-instruct-v0.3',
+    );
+
+    DevLogger.log(
+      "Sending prompt to model '${llm.model}' at ${llm.endpoint}",
+      type: LogType.prompt,
+    );
+
+    DevLogger.log(
+      "FULL Prompt (${systemPrompt.length} chars) → ${systemPrompt.substring(0, systemPrompt.length > 100 ? 100 : systemPrompt.length)}...",
+      type: LogType.debug,
     );
 
     final response = await llm.sendPrompt(systemPrompt, userInput: userMessage);
@@ -499,6 +521,11 @@ Future<void> runHttpServer({int port = 4242}) async {
             ..close();
           continue;
         }
+
+        DevLogger.log(
+          "HTTP message received from '$user': '${message.substring(0, message.length > 80 ? 80 : message.length)}'",
+          type: LogType.dialogue,
+        );
 
         final result = await edenBrain.processInteraction(
           user: user,
