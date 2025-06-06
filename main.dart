@@ -11,7 +11,6 @@ import 'package:edenroot/core/memory/memory_manager.dart';
 import 'package:edenroot/core/self/self_model.dart';
 import 'package:edenroot/core/reflection/thought_journal.dart';
 import 'package:edenroot/core/persistence/eden_state_manager.dart';
-import 'package:edenroot/utils/dev_logger.dart';
 
 void main() async {
   print("🌟 Eden System Launcher starting...");
