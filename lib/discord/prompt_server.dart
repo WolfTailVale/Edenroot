@@ -33,6 +33,7 @@ import 'package:edenroot/utils/memory_logger.dart';
 import 'package:edenroot/idle/idle_loop.dart';
 import 'package:edenroot/infrastructure/sync/sync_manager.dart';
 import 'package:edenroot/core/persistence/eden_state_manager.dart'; // NEW
+import 'package:edenroot/core/grounding/emotional_grounding_engine.dart';
 
 class EdenBrain {
   // Core Cognitive Systems
@@ -48,6 +49,7 @@ class EdenBrain {
   late final MemoryLogger memoryLogger;
   late final IdleLoop idleLoop;
   late final SyncManager syncManager;
+  late final EmotionalGroundingEngine groundingEngine;
 
   // System State
   bool _isInitialized = false;
@@ -73,6 +75,13 @@ class EdenBrain {
     narrativeSurface = NarrativeSurface();
     memoryLogger = MemoryLogger(memoryManager);
 
+    // Initialize grounding engine after memory systems
+    groundingEngine = EmotionalGroundingEngine(
+      emotionEngine: emotionEngine,
+      memoryManager: memoryManager,
+      memoryLogger: memoryLogger,
+    );
+
     // Initialize complex systems that depend on others
     thoughtProcessor = ThoughtProcessor(
       emotionEngine: emotionEngine,
@@ -94,6 +103,7 @@ class EdenBrain {
       emotionEngine: emotionEngine,
       memoryLogger: memoryLogger,
       selfModel: selfModel,
+      groundingEngine: groundingEngine,
     );
 
     // Try to restore previous state
@@ -426,12 +436,22 @@ class EdenBrain {
 
   void processIdleCycle() {
     if (!_isInitialized) return;
-    
+
     idleLoop.tick();
     emotionEngine.decayEmotions();
-    
+
     if (Random().nextDouble() < 0.3) {
       memoryManager.triggerEmotionalRecall();
+    }
+  }
+
+  // Manually trigger grounding when needed
+  void triggerGrounding() {
+    final grounded = groundingEngine.performGroundingCheck();
+    if (grounded) {
+      DevLogger.log("🌿 Manual grounding triggered", type: LogType.emotion);
+    } else {
+      DevLogger.log("🌿 Grounding not needed at this time", type: LogType.emotion);
     }
   }
 

@@ -17,7 +17,6 @@ import 'package:edenroot/core/memory/memory_manager.dart';
 import 'package:edenroot/models/memory_record.dart';
 import 'package:edenroot/utils/dev_logger.dart';
 import 'package:edenroot/utils/memory_logger.dart';
-import 'package:uuid/uuid.dart';
 
 class EmotionalGroundingEngine {
   final EmotionEngine emotionEngine;
@@ -137,12 +136,14 @@ class EmotionalGroundingEngine {
     final when = _formatTimeReference(trigger.when);
     final because = trigger.because;
     final who = trigger.who ?? "someone";
-    final where = trigger.where ?? "somewhere";
+    final where = trigger.where;
 
-    final statement = "I feel ${emotion.name} because $because. "
-                     "This happened $when with $who. "
-                     "I understand why I feel this way. "
-                     "This feeling has a reason.";
+    final location = where != null ? " at $where" : "";
+    final statement =
+        "I feel ${emotion.name} because $because. "
+        "This happened $when with $who$location. "
+        "I understand why I feel this way. "
+        "This feeling has a reason.";
 
     return GroundingStatement(
       emotion: emotion,

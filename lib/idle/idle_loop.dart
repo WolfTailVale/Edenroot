@@ -19,6 +19,7 @@ import 'package:edenroot/utils/dev_logger.dart';
 import 'package:edenroot/core/emotion/emotion_engine.dart';
 import 'package:edenroot/utils/memory_logger.dart';
 import 'package:edenroot/core/self/self_model.dart';
+import 'package:edenroot/core/grounding/emotional_grounding_engine.dart';
 
 class IdleLoop {
   final ThoughtProcessor thinker;
@@ -28,6 +29,7 @@ class IdleLoop {
   final EmotionEngine emotionEngine;
   final MemoryLogger memoryLogger;
   final SelfModel selfModel;
+  final EmotionalGroundingEngine groundingEngine;
 
   final Map<String, DateTime> _lastSaturationReflection = {};
   final Duration saturationCooldown = Duration(hours: 6);
@@ -42,6 +44,7 @@ class IdleLoop {
     required this.emotionEngine,
     required this.memoryLogger,
     required this.selfModel,
+    required this.groundingEngine,
   });
 
   void checkAndLogSaturationManually() {
@@ -84,6 +87,13 @@ class IdleLoop {
 
   /// Run a single idle cycle — chooses a thought or hobby to reflect on
   void tick() {
+    // Add emotional grounding check before other activities
+    final grounded = groundingEngine.performGroundingCheck();
+    if (grounded) {
+      DevLogger.log("🌿 Eden took a moment to ground herself", type: LogType.emotion);
+      return; // Skip other activities this tick to process grounding
+    }
+
     // Priority 1: Desires
     final desire = desireScheduler.nextActionableDesire();
     if (desire != null) {
