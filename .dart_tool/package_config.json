@@ -111,9 +111,9 @@
     },
     {
       "name": "intl",
-      "rootUri": "file:///C:/Users/NozomiSoraCh/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.18.1",
+      "rootUri": "file:///C:/Users/NozomiSoraCh/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.19.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "io",
@@ -129,9 +129,9 @@
     },
     {
       "name": "lints",
-      "rootUri": "file:///C:/Users/NozomiSoraCh/AppData/Local/Pub/Cache/hosted/pub.dev/lints-3.0.0",
+      "rootUri": "file:///C:/Users/NozomiSoraCh/AppData/Local/Pub/Cache/hosted/pub.dev/lints-4.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.1"
     },
     {
       "name": "logging",
@@ -338,7 +338,7 @@
       "languageVersion": "3.0"
     }
   ],
-  "generated": "2025-06-06T09:05:11.967465Z",
+  "generated": "2025-06-06T11:42:39.261884Z",
   "generator": "pub",
   "generatorVersion": "3.7.2",
   "flutterRoot": "file:///D:/flutter",

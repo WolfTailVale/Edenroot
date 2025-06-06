@@ -56,7 +56,7 @@ class EdenSystemLauncher {
       await _startPromptServer();
       
       // Wait a moment for brain to be ready
-      await Future.delayed(Duration(seconds: 3));
+      await Future.delayed(Duration(seconds: 2));
       
       // Start Discord bridge
       await _startDiscordBridge();
@@ -183,6 +183,22 @@ class EdenSystemLauncher {
         .listen((line) {
       DevLogger.log("🤖 Discord Error: $line", type: LogType.error);
     });
+    
+    // Wait a moment and verify Discord bridge is running
+    await Future.delayed(Duration(seconds: 2));
+    await _waitForDiscordReady();
+  }
+
+  Future<void> _waitForDiscordReady() async {
+    // Check if the process is still running by trying to get exit code with timeout
+    try {
+      final exitCode = await _discordBridgeProcess!.exitCode.timeout(Duration(milliseconds: 100));
+      // If we got an exit code, the process has already terminated
+      throw Exception("Discord bridge failed to start (exit code: $exitCode)");
+    } on TimeoutException {
+      // If timeout occurred, process is still running (good!)
+      DevLogger.log("✅ Discord bridge is running and ready", type: LogType.startup);
+    }
   }
 
   void _setupShutdownHandlers() {
@@ -204,30 +220,43 @@ class EdenSystemLauncher {
   }
 
   Future<void> _waitForShutdown() async {
-    // Wait for processes to exit or shutdown signal
+    DevLogger.log("🛑 Press Ctrl+C to safely shutdown Eden", type: LogType.startup);
+    
+    // Wait for shutdown signal or unexpected process death
     while (!_isShuttingDown) {
-      await Future.delayed(Duration(seconds: 1));
+      await Future.delayed(Duration(seconds: 2));
       
-      // Check if any process died unexpectedly
+      // Check if brain server died unexpectedly
       if (_promptServerProcess != null) {
         try {
-          final exitCode = await _promptServerProcess!.exitCode.timeout(Duration.zero);
-          DevLogger.log("🧠 Brain process exited with code: $exitCode", type: LogType.error);
-          await _gracefulShutdown('BRAIN_DIED');
+          final code = await _promptServerProcess!.exitCode.timeout(Duration(milliseconds: 100));
+          if (code != 0) {
+            DevLogger.log("💥 Brain server crashed with code: $code", type: LogType.error);
+            await _gracefulShutdown('BRAIN_CRASHED');
+          } else {
+            DevLogger.log("🧠 Brain server exited cleanly", type: LogType.shutdown);
+            await _gracefulShutdown('BRAIN_STOPPED');
+          }
           break;
         } on TimeoutException {
-          // Process is still running, continue
+          // Process still running, continue monitoring
         }
       }
       
+      // Check if Discord bridge died unexpectedly
       if (_discordBridgeProcess != null) {
         try {
-          final exitCode = await _discordBridgeProcess!.exitCode.timeout(Duration.zero);
-          DevLogger.log("🤖 Discord bridge exited with code: $exitCode", type: LogType.error);
-          await _gracefulShutdown('DISCORD_DIED');
+          final code = await _discordBridgeProcess!.exitCode.timeout(Duration(milliseconds: 100));
+          if (code != 0) {
+            DevLogger.log("💥 Discord bridge crashed with code: $code", type: LogType.error);
+            await _gracefulShutdown('DISCORD_CRASHED');
+          } else {
+            DevLogger.log("🤖 Discord bridge exited cleanly", type: LogType.shutdown);
+            await _gracefulShutdown('DISCORD_STOPPED');
+          }
           break;
         } on TimeoutException {
-          // Process is still running, continue
+          // Process still running, continue monitoring
         }
       }
     }

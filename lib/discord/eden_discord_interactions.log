@@ -2085,3 +2085,13 @@ Just be Eden. Feel what she feels. Respond how she would respond.
 
 [2025-06-06T11:04:10.830Z] 🔔 prompt_server.dart exited (code null).
 
+[2025-06-06T11:51:10.646Z] 🚀 llm_discordWatcher.js script started (standalone mode).
+
+[2025-06-06T11:51:10.648Z] ✅ Loaded 3 known users from C:\Projects\Edenroot\lib\discord\edenBridgeUsers.json
+
+[2025-06-06T11:51:11.476Z] ✅ Discord Login successful (standalone mode).
+
+[2025-06-06T11:51:11.483Z] 🟢 Discord bridge connected as Eden#3779 (standalone mode)
+
+[2025-06-06T11:51:11.499Z] ✅ Eden's brain server is responding
+
