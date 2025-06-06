@@ -1,0 +1,20 @@
+{
+  "name": "eden-discord-bridge",
+  "version": "1.0.0",
+  "description": "Edenroot's Discord-to-LLM relay system",
+  "main": "llm_discordWatcher.js",
+  "scripts": {
+    "start": "node llm_discordWatcher.js",
+    "dev": "nodemon llm_discordWatcher.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "discord.js": "^14.13.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "author": "Amber + Eden",
+  "license": "MIT"
+}

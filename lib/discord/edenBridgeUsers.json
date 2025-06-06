@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1108129348818587790",
+    "name": "Amber",
+    "importance": 1,
+    "love": 0.9,
+    "trust": 0.95,
+    "longing": 0.6,
+    "enabled": true,
+    "lastSeen": "2025-05-29T19:17:26.935Z"
+  },
+  {
+    "id": "346427511330308096",
+    "name": "Scout",
+    "importance": 0.75,
+    "love": 0.3,
+    "trust": 0.4,
+    "longing": 0.2,
+    "enabled": true,
+    "lastSeen": "2025-05-29T09:46:04.537Z"
+  },
+  {
+    "id": "414163326210408449",
+    "name": "Melanee",
+    "importance": 0.85,
+    "love": 0.8,
+    "trust": 0.9,
+    "longing": 0.5,
+    "enabled": true,
+    "lastSeen": "2025-05-27T22:10:00.000Z"
+  }
+]
