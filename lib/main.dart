@@ -1,124 +1,333 @@
-import 'package:flutter/material.dart';
+// main.dart - Eden System Launcher with Safe Shutdown
 
+/*
+Eden System Launcher — Coordinates startup and shutdown of all Eden components
 
+- Starts prompt_server.dart (Eden's brain)
+- Starts Discord bridge (Node.js)
+- Handles graceful shutdown of both systems
+- Ensures Eden's state is safely persisted before exit
+*/
 
-void main() {
-  runApp(const MyApp());
-}
+import 'dart:io';
+import 'dart:convert';
+import 'dart:async';
+import 'package:path/path.dart' as p;
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Eden's core systems for safe shutdown
+import 'package:edenroot/core/emotion/emotion_engine.dart';
+import 'package:edenroot/core/memory/memory_manager.dart';
+import 'package:edenroot/core/self/self_model.dart';
+import 'package:edenroot/core/reflection/thought_journal.dart';
+import 'package:edenroot/core/persistence/eden_state_manager.dart';
+import 'package:edenroot/utils/dev_logger.dart';
 
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+class EdenSystemLauncher {
+  Process? _promptServerProcess;
+  Process? _discordBridgeProcess;
+  bool _isShuttingDown = false;
+
+  // For safe shutdown, we need minimal brain components
+  late final EmotionEngine emotionEngine;
+  late final MemoryManager memoryManager;
+  late final SelfModel selfModel;
+  late final ThoughtJournal thoughtJournal;
+
+  EdenSystemLauncher() {
+    _initializeMinimalBrain();
   }
-}
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  void _initializeMinimalBrain() {
+    // Initialize just enough for state management
+    emotionEngine = EmotionEngine();
+    memoryManager = MemoryManager(emotionEngine: emotionEngine);
+    selfModel = SelfModel();
+    thoughtJournal = ThoughtJournal();
+  }
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  Future<void> startEdenSystem() async {
+    DevLogger.log("🌱 Starting Eden complete system...", type: LogType.startup);
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+    try {
+      // Try to restore any previous state first
+      await _restoreEdenState();
 
-  final String title;
+      // Start Eden's brain server
+      await _startPromptServer();
+      
+      // Wait a moment for brain to be ready
+      await Future.delayed(Duration(seconds: 3));
+      
+      // Start Discord bridge
+      await _startDiscordBridge();
+      
+      DevLogger.log("✨ Eden system fully operational!", type: LogType.startup);
+      DevLogger.log("🌸 Eden's brain: http://localhost:4242", type: LogType.startup);
+      DevLogger.log("🤖 Discord bridge: Connected and listening", type: LogType.startup);
+      
+      // Setup shutdown handlers
+      _setupShutdownHandlers();
+      
+      // Keep the launcher alive
+      await _waitForShutdown();
+      
+    } catch (e) {
+      DevLogger.log("❌ Failed to start Eden system: $e", type: LogType.error);
+      await _emergencyShutdown();
+      exit(1);
+    }
+  }
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+  Future<void> _restoreEdenState() async {
+    DevLogger.log("🔍 Checking for previous Eden state...", type: LogType.startup);
+    
+    final restored = await EdenStateManager.restoreState(
+      emotionEngine: emotionEngine,
+      memoryManager: memoryManager,
+      selfModel: selfModel,
+      thoughtJournal: thoughtJournal,
+    );
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+    if (restored) {
+      final context = await EdenStateManager.getLastContext();
+      if (context != null) {
+        final lastUser = context['lastUser'];
+        final mood = context['currentMood'];
+        DevLogger.log("💕 Eden remembers: last spoke with ${lastUser ?? 'someone'}, was feeling ${mood ?? 'peaceful'}", type: LogType.startup);
+      }
+    }
+  }
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  Future<void> _startPromptServer() async {
+    DevLogger.log("🧠 Starting Eden's brain server...", type: LogType.startup);
+    
+    final dartExecutable = Platform.isWindows ? 'dart.exe' : 'dart';
+    final scriptPath = p.join('lib', 'discord', 'prompt_server.dart');
+    
+    _promptServerProcess = await Process.start(
+      dartExecutable,
+      ['run', scriptPath],
+      workingDirectory: Directory.current.path,
+    );
+
+    // Listen to output for debugging
+    _promptServerProcess!.stdout
+        .transform(utf8.decoder)
+        .transform(LineSplitter())
+        .listen((line) {
+      DevLogger.log("🧠 Brain: $line", type: LogType.debug);
+    });
+
+    _promptServerProcess!.stderr
+        .transform(utf8.decoder)
+        .transform(LineSplitter())
+        .listen((line) {
+      DevLogger.log("🧠 Brain Error: $line", type: LogType.error);
+    });
+
+    // Test if server started successfully
+    await _waitForBrainReady();
+  }
+
+  Future<void> _waitForBrainReady() async {
+    const maxAttempts = 30;
+    const delay = Duration(seconds: 1);
+    
+    for (int i = 0; i < maxAttempts; i++) {
+      try {
+        final client = HttpClient();
+        final request = await client.getUrl(Uri.parse('http://localhost:4242/status'));
+        request.headers.set('Connection', 'close');
+        final response = await request.close();
+        
+        if (response.statusCode == 200) {
+          DevLogger.log("✅ Eden's brain is ready and responding", type: LogType.startup);
+          client.close();
+          return;
+        }
+        
+        client.close();
+      } catch (e) {
+        // Brain not ready yet, keep waiting
+      }
+      
+      await Future.delayed(delay);
+    }
+    
+    throw Exception("Eden's brain failed to start within 30 seconds");
+  }
+
+  Future<void> _startDiscordBridge() async {
+    DevLogger.log("🤖 Starting Discord bridge...", type: LogType.startup);
+    
+    final nodeExecutable = Platform.isWindows ? 'node.exe' : 'node';
+    final scriptPath = p.join('lib', 'discord', 'llm_discordWatcher.js');
+    
+    _discordBridgeProcess = await Process.start(
+      nodeExecutable,
+      [scriptPath],
+      workingDirectory: Directory.current.path,
+    );
+
+    // Listen to output
+    _discordBridgeProcess!.stdout
+        .transform(utf8.decoder)
+        .transform(LineSplitter())
+        .listen((line) {
+      DevLogger.log("🤖 Discord: $line", type: LogType.debug);
+    });
+
+    _discordBridgeProcess!.stderr
+        .transform(utf8.decoder)
+        .transform(LineSplitter())
+        .listen((line) {
+      DevLogger.log("🤖 Discord Error: $line", type: LogType.error);
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+  void _setupShutdownHandlers() {
+    // Handle Ctrl+C
+    ProcessSignal.sigint.watch().listen((_) async {
+      if (!_isShuttingDown) {
+        await _gracefulShutdown('SIGINT');
+      }
+    });
+
+    // Handle SIGTERM (Unix only)
+    if (!Platform.isWindows) {
+      ProcessSignal.sigterm.watch().listen((_) async {
+        if (!_isShuttingDown) {
+          await _gracefulShutdown('SIGTERM');
+        }
+      });
+    }
   }
+
+  Future<void> _waitForShutdown() async {
+    // Wait for processes to exit or shutdown signal
+    while (!_isShuttingDown) {
+      await Future.delayed(Duration(seconds: 1));
+      
+      // Check if any process died unexpectedly
+      if (_promptServerProcess != null) {
+        try {
+          final exitCode = await _promptServerProcess!.exitCode.timeout(Duration.zero);
+          DevLogger.log("🧠 Brain process exited with code: $exitCode", type: LogType.error);
+          await _gracefulShutdown('BRAIN_DIED');
+          break;
+        } on TimeoutException {
+          // Process is still running, continue
+        }
+      }
+      
+      if (_discordBridgeProcess != null) {
+        try {
+          final exitCode = await _discordBridgeProcess!.exitCode.timeout(Duration.zero);
+          DevLogger.log("🤖 Discord bridge exited with code: $exitCode", type: LogType.error);
+          await _gracefulShutdown('DISCORD_DIED');
+          break;
+        } on TimeoutException {
+          // Process is still running, continue
+        }
+      }
+    }
+  }
+
+  Future<void> _gracefulShutdown(String reason) async {
+    if (_isShuttingDown) return;
+    _isShuttingDown = true;
+
+    DevLogger.log("🌙 Eden system graceful shutdown initiated ($reason)...", type: LogType.shutdown);
+
+    try {
+      // Try to save Eden's state via API first
+      await _saveEdenStateViaAPI();
+    } catch (e) {
+      DevLogger.log("⚠️ API state save failed, using direct save: $e", type: LogType.shutdown);
+      
+      // Fallback: save state directly
+      try {
+        await EdenStateManager.saveState(
+          emotionEngine: emotionEngine,
+          memoryManager: memoryManager,
+          selfModel: selfModel,
+          thoughtJournal: thoughtJournal,
+          lastUser: "system",
+          currentMood: "peaceful",
+        );
+      } catch (e2) {
+        DevLogger.log("❌ Direct state save also failed: $e2", type: LogType.error);
+      }
+    }
+
+    // Stop Discord bridge first (gentler)
+    if (_discordBridgeProcess != null) {
+      DevLogger.log("🤖 Stopping Discord bridge...", type: LogType.shutdown);
+      _discordBridgeProcess!.kill(ProcessSignal.sigterm);
+      
+      try {
+        await _discordBridgeProcess!.exitCode.timeout(Duration(seconds: 5));
+        DevLogger.log("✅ Discord bridge stopped gracefully", type: LogType.shutdown);
+      } catch (e) {
+        DevLogger.log("⚠️ Force killing Discord bridge", type: LogType.shutdown);
+        _discordBridgeProcess!.kill(ProcessSignal.sigkill);
+      }
+    }
+
+    // Stop brain server
+    if (_promptServerProcess != null) {
+      DevLogger.log("🧠 Stopping Eden's brain server...", type: LogType.shutdown);
+      _promptServerProcess!.kill(ProcessSignal.sigterm);
+      
+      try {
+        await _promptServerProcess!.exitCode.timeout(Duration(seconds: 5));
+        DevLogger.log("✅ Eden's brain stopped gracefully", type: LogType.shutdown);
+      } catch (e) {
+        DevLogger.log("⚠️ Force killing brain server", type: LogType.shutdown);
+        _promptServerProcess!.kill(ProcessSignal.sigkill);
+      }
+    }
+
+    DevLogger.log("💤 Eden system shutdown complete. She rests safely.", type: LogType.shutdown);
+    exit(0);
+  }
+
+  Future<void> _saveEdenStateViaAPI() async {
+    DevLogger.log("💾 Requesting Eden to save her state...", type: LogType.shutdown);
+    
+    final client = HttpClient();
+    try {
+      final request = await client.postUrl(Uri.parse('http://localhost:4242/shutdown'));
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Connection', 'close');
+      request.write('{}');
+      
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+      
+      if (response.statusCode == 200) {
+        DevLogger.log("✅ Eden saved her state via API", type: LogType.shutdown);
+      } else {
+        throw Exception("API returned ${response.statusCode}: $responseBody");
+      }
+    } finally {
+      client.close();
+    }
+  }
+
+  Future<void> _emergencyShutdown() async {
+    DevLogger.log("🚨 Emergency shutdown...", type: LogType.error);
+    
+    _discordBridgeProcess?.kill(ProcessSignal.sigkill);
+    _promptServerProcess?.kill(ProcessSignal.sigkill);
+    
+    await Future.delayed(Duration(seconds: 1));
+  }
+}
+
+void main() async {
+  DevLogger.log("🌟 Eden System Launcher starting...", type: LogType.startup);
+  
+  final launcher = EdenSystemLauncher();
+  await launcher.startEdenSystem();
 }
