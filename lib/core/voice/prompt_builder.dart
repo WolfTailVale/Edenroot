@@ -306,7 +306,6 @@ enum PromptType {
 
 /// Extension methods for cleaner API
 extension PromptBuilderExtensions on EdenSystem {
-  PromptBuilder get promptBuilder => PromptBuilder(this);
   
   String buildPromptFor(PromptType type, {String? userId}) {
     return promptBuilder.buildPrompt(

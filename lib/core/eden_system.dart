@@ -7,6 +7,7 @@ import 'package:edenroot/core/will/free_will_engine.dart';
 import 'package:edenroot/core/will/desire_scheduler.dart';
 import 'package:edenroot/idle/idle_loop.dart';
 import 'package:edenroot/core/grounding/emotional_grounding_engine.dart';
+import 'package:edenroot/core/voice/prompt_builder.dart';
 
 abstract class EdenSystem {
   EmotionEngine get emotionEngine;
@@ -18,4 +19,5 @@ abstract class EdenSystem {
   DesireScheduler get desireScheduler;
   IdleLoop get idleLoop;
   EmotionalGroundingEngine get groundingEngine;
+  PromptBuilder get promptBuilder;
 }
