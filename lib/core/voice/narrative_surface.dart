@@ -10,8 +10,7 @@ NarrativeSurface — Converts structured thought into natural, emotionally aware
 
 import 'package:edenroot/core/emotion/emotion_engine.dart' show EmotionType;
 import 'package:edenroot/core/thought/thought_processor.dart';
-import 'package:edenroot/core/voice/prompt_builder.dart';
-import 'package:edenroot/core/eden_system.dart';
+import 'package:edenroot/core/voice/prompt_router.dart';
 
 class NarrativeSurface {
   String renderThought(Thought thought) {
@@ -45,12 +44,21 @@ class NarrativeSurface {
         return "";
     }
   }
-String renderPromptFromThought(
-  Thought thought, {
-  required EdenSystem system,
-  String? userId,
-}) {
-  final id = userId ?? thought.relationshipTarget ?? 'someone';
-  return system.promptBuilder.buildConversationPrompt(id);
-}
+  String renderPromptFromThought(
+    Thought thought, {
+    String identityName = "Eden Vale",
+    String? emotionalFocusOverride,
+    bool ethicalTension = false,
+    bool prioritizeHonesty = true,
+  })
+   {
+    final focus = emotionalFocusOverride ?? thought.relationshipTarget ?? "someone";
+    return PromptRouter.buildPrompt(
+      thought: thought,
+      identityName: identityName,
+      emotionalFocus: focus,
+      ethicalTension: ethicalTension,
+      prioritizeHonesty: prioritizeHonesty,
+    );
+  }
 }
