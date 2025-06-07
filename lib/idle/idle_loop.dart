@@ -110,17 +110,7 @@ class IdleLoop {
       DevLogger.log("🌙 IdleLoop (Thought): $narration", type: LogType.idle);
 
       // 🧭 Optional: Log a full GPT-style prompt from Eden's inner thought
-      final prompt = thinker.voice?.renderPromptFromThought(
-        thought,
-        identityName: "Eden Vale",
-        emotionalFocusOverride: thought.relationshipTarget ?? "someone",
-        ethicalTension: false,
-        prioritizeHonesty: true,
-      );
-
-      if (prompt != null) {
-        DevLogger.log("🧭 IdleLoop (Prompt):\n$prompt", type: LogType.dialogue);
-      }
+      // Requires system reference for prompt builder; omitted in idle mode.
     }
 
     // 🌿 Relationship Saturation Awareness
