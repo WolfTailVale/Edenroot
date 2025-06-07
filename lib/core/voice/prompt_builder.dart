@@ -201,27 +201,11 @@ Foundational values (your ethical soil):
   /// Helper methods
   
   List<MemoryRecord> _getRelevantMemories(PromptType promptType, String? userId) {
-    // Use only available MemoryManager methods
-    switch (promptType) {
-      case PromptType.conversation:
-        if (userId != null) {
-          return system.memoryManager.fromUser(userId, applyResonance: false).take(5).toList();
-        }
-        return system.memoryManager.getRecent(limit: 5, applyResonance: false);
-        
-      case PromptType.reflection:
-      case PromptType.dream:
-        // Use memories with highest positive valence as "emotionally resonant"
-        return system.memoryManager.filterByEmotion(0.2, 1.0, applyResonance: false).take(3).toList();
-        
-      case PromptType.morning:
-        // Use today's memories
-        return system.memoryManager.recent(maxAge: 1, applyResonance: false);
-        
-      default:
-        // Use recent significant (highest valence) memories
-        return system.memoryManager.filterByEmotion(0.3, 1.0, applyResonance: false).take(3).toList();
-    }
+    // Delegate retrieval to MemoryInterpreter for centralized logic
+    return system.memoryInterpreter.fetchForPrompt(
+      promptType,
+      userId: userId,
+    );
   }
   
   String _describeEmotionalState(double mood, EmotionType dominant) {
