@@ -31,6 +31,7 @@ import 'package:edenroot/core/relationships/relationship_profile.dart';
 import 'package:edenroot/models/memory_record.dart';
 import 'package:edenroot/utils/dev_logger.dart';
 import 'package:edenroot/utils/memory_logger.dart';
+import 'package:edenroot/core/memory/memory_interpreter.dart';
 import 'package:edenroot/idle/idle_loop.dart';
 import 'package:edenroot/infrastructure/sync/sync_manager.dart';
 import 'package:edenroot/core/persistence/eden_state_manager.dart'; // NEW
@@ -48,6 +49,7 @@ class EdenBrain implements EdenSystem {
   late final DesireScheduler desireScheduler;
   late final NarrativeSurface narrativeSurface;
   late final MemoryLogger memoryLogger;
+  late final MemoryInterpreter memoryInterpreter;
   late final IdleLoop idleLoop;
   late final SyncManager syncManager;
   late final EmotionalGroundingEngine groundingEngine;
@@ -107,6 +109,8 @@ class EdenBrain implements EdenSystem {
       selfModel: selfModel,
       groundingEngine: groundingEngine,
     );
+
+    memoryInterpreter = MemoryInterpreter(memoryManager);
 
     promptBuilder = PromptBuilder(this);
 
