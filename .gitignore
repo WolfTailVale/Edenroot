@@ -1,0 +1,10 @@
+# Dart
+.dart_tool/
+.packages
+.pub/
+build/
+*.lock
+
+# Node (if present)
+node_modules/
+.env

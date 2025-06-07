@@ -1,0 +1,1 @@
+Get-ChildItem -Path C:\Projects\Edenroot -Recurse -Exclude "node_modules", ".dart_tool" | Select-Object -ExpandProperty FullName > folder_tree.txt
