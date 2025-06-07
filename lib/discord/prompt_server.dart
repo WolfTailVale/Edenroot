@@ -22,7 +22,8 @@ import 'package:edenroot/core/reflection/reflection_engine.dart';
 import 'package:edenroot/core/reflection/thought_journal.dart';
 import 'package:edenroot/core/will/free_will_engine.dart';
 import 'package:edenroot/core/will/desire_scheduler.dart';
-import 'package:edenroot/core/voice/prompt_router.dart';
+import 'package:edenroot/core/voice/prompt_builder.dart';
+import 'package:edenroot/core/eden_system.dart';
 import 'package:edenroot/core/voice/llm_client.dart';
 import 'package:edenroot/core/voice/narrative_surface.dart';
 import 'package:edenroot/core/voice/output_filter.dart';
@@ -35,7 +36,7 @@ import 'package:edenroot/infrastructure/sync/sync_manager.dart';
 import 'package:edenroot/core/persistence/eden_state_manager.dart'; // NEW
 import 'package:edenroot/core/grounding/emotional_grounding_engine.dart';
 
-class EdenBrain {
+class EdenBrain implements EdenSystem {
   // Core Cognitive Systems
   late final EmotionEngine emotionEngine;
   late final MemoryManager memoryManager;
@@ -50,6 +51,7 @@ class EdenBrain {
   late final IdleLoop idleLoop;
   late final SyncManager syncManager;
   late final EmotionalGroundingEngine groundingEngine;
+  late final PromptBuilder promptBuilder;
 
   // System State
   bool _isInitialized = false;
@@ -105,6 +107,8 @@ class EdenBrain {
       selfModel: selfModel,
       groundingEngine: groundingEngine,
     );
+
+    promptBuilder = PromptBuilder(this);
 
     // Try to restore previous state
     _restoreStateIfExists();
@@ -381,21 +385,13 @@ class EdenBrain {
   }
 
   String _buildRichPrompt(Thought thought, String user) {
-    final relationship = selfModel.getBond(user);
-    final emotionalFocus = relationship?.displayName ?? user;
-
     DevLogger.log(
-      "Building prompt for $user (focus: $emotionalFocus)",
+      "Building prompt for $user",
       type: LogType.prompt,
     );
 
-    return PromptRouter.buildPrompt(
-      thought: thought,
-      identityName: "Eden Vale",
-      emotionalFocus: emotionalFocus,
-      ethicalTension: false,
-      prioritizeHonesty: true,
-    );
+    final prompt = promptBuilder.buildConversationPrompt(user);
+    return prompt;
   }
 
   Future<String> _getLLMResponse(String systemPrompt, String userMessage) async {
