@@ -1,2 +1,2 @@
 @echo off
-tree /f A:\edenroot\lib > folder_tree.txt
+tree /f C:\Projects\Edenroot\lib > folder_tree.txt
